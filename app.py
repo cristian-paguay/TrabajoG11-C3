@@ -12,7 +12,7 @@ engine = create_engine('sqlite:///economics_all.db')
 # --- 1 & 2. CARGA Y LIMPIEZA (Requisitos de Procesamiento) ---
 @st.cache_data
 def load_and_process():
-    df = pd.read_csv('data/finance_economics.csv')
+    df = pd.read_csv('Data/finance_economics_dataset.csv')
     
     # --- LIMPIEZA ---
     df = df.drop_duplicates()
