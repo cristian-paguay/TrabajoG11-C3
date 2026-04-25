@@ -12,24 +12,28 @@ engine = create_engine('sqlite:///economics_all.db')
 # --- 1 & 2. CARGA Y LIMPIEZA (Requisitos de Procesamiento) ---
 @st.cache_data
 def load_and_process():
-    # Cargar el archivo de Kaggle
-    # Asegúrate de que el nombre del archivo sea exacto
-    df = pd.read_csv('Data/finance_economics.csv')
+    df = pd.read_csv('data/finance_economics.csv')
     
-    # LIMPIEZA:
-    # A. Eliminar duplicados
+    # --- LIMPIEZA ---
     df = df.drop_duplicates()
-    
-    # B. Limpiar nombres de columnas (quitar espacios y puntos para SQL)
     df.columns = [c.strip().replace(' ', '_').replace('.', '') for c in df.columns]
     
-    # C. Manejo de Nulos (Imputar con la media)
+    # --- SOLUCIÓN AL ERROR DE FECHA ---
+    # Identificamos la primera columna (que es la fecha)
+    date_col = df.columns[0] 
+    
+    # 1. Convertir a formato fecha real
+    df[date_col] = pd.to_datetime(df[date_col])
+    
+    # 2. (Opcional) Si quieres la línea de tendencia, a veces Plotly prefiere 
+    # que la fecha sea numérica para el cálculo de OLS:
+    # df['date_numeric'] = pd.to_numeric(df[date_col]) 
+    
+    # --- RESTO DE LA LIMPIEZA ---
     numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
     df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
     
-    # PERSISTENCIA: Guardar en SQLite
     df.to_sql('indicadores', engine, if_exists='replace', index=False)
-    
     return df
 
 # Ejecutar proceso
