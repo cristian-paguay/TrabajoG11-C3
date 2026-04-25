@@ -14,7 +14,7 @@ engine = create_engine('sqlite:///economics_all.db')
 def load_and_process():
     # Cargar el archivo de Kaggle
     # Asegúrate de que el nombre del archivo sea exacto
-    df = pd.read_csv('Data/finance_economics.csv')
+    df = pd.read_csv('Data/finance_economics_dataset.csv')
     
     # LIMPIEZA:
     # A. Eliminar duplicados
