@@ -302,6 +302,64 @@ El análisis del periodo 2000–2008 permite extraer conclusiones con relevancia
 - **Random Forest supera a Gradient Boosting en estabilidad** dentro del rango de hiperparámetros explorado, aunque Gradient Boosting presenta menor MAE en el subconjunto de observaciones extremas (crisis 2007–2008), donde la señal no lineal es más pronunciada.
 
 ---
+## 🔬 Rediseño del Enfoque de Modelado ante Cambios de Régimen
+
+El dataset cubre tres regímenes económicos estructuralmente distintos (burbuja dot-com 2000–2002, expansión 2003–2006, acumulación de riesgo subprime 2007–2008). El enfoque actual entrena Random Forest y Gradient Boosting sobre el período completo usando un corte temporal simple (`train_test_split` con `shuffle=False`), lo que expone los modelos a aprender relaciones que solo son válidas dentro de un régimen y generalizarlas incorrectamente a otros.
+
+### Problema central
+
+Un modelo entrenado principalmente en la expansión 2003–2006 aprende que el crecimiento del PIB y el precio del petróleo son predictores positivos del precio de cierre. Esa relación se invierte en 2007–2008. El R² > 0.95 observado puede estar inflado por este solapamiento de regímenes en el conjunto de prueba, no por capacidad predictiva real fuera de muestra.
+
+### Rediseño propuesto
+
+#### 1. Validación Walk-Forward por ventana deslizante
+
+Reemplazar `train_test_split` por validación walk-forward: entrenar en [t₀, t], predecir en [t, t+Δ], avanzar la ventana. Esto elimina el data leakage temporal y mide el rendimiento real del modelo ante datos que nunca vio en ningún régimen previo.
+
+```
+Fold 1: Train [2000–2002] → Test [2003]
+Fold 2: Train [2000–2003] → Test [2004]
+...
+Fold N: Train [2000–2007] → Test [2008]
+```
+
+#### 2. Etiquetado explícito de régimen como feature
+
+Incorporar la etiqueta de clúster K-Means (`Régimen 0/1/2`) como variable de entrada al modelo supervisado. Esto permite que RF y GB aprendan relaciones condicionadas al estado macroeconómico en lugar de promediarlas entre regímenes incompatibles.
+
+```python
+df['Regimen'] = km.labels_          # clúster K-Means ya calculado
+feats_reg = feats_reg + ['Regimen'] # agregar al vector de features
+```
+
+#### 3. Modelos separados por régimen
+
+Entrenar un modelo independiente por cada clúster identificado. Cada modelo aprende las relaciones válidas dentro de su régimen; en producción, un clasificador de régimen activo selecciona qué modelo usar.
+
+| Régimen | Período aproximado | Modelo específico |
+|---|---|---|
+| Régimen 0 | Burbuja / colapso dot-com | RF entrenado en 2000–2002 |
+| Régimen 1 | Expansión | RF entrenado en 2003–2006 |
+| Régimen 2 | Pre-crisis subprime | RF entrenado en 2007–2008 |
+
+#### 4. Detección de quiebres estructurales
+
+Aplicar tests de quiebre estructural (CUSUM o Bai-Perron) sobre los residuos del modelo para identificar automáticamente cuándo las relaciones aprendidas dejan de ser estables. Esto convierte la detección de régimen en un paso formal del pipeline, en lugar de depender solo del clustering no supervisado.
+
+#### 5. Modelos de cambio de régimen (Markov Switching)
+
+Para una solución econométricamente rigurosa, sustituir o complementar RF/GB con un **Markov Switching Regression** (Hamilton 1989): modela explícitamente la probabilidad de transición entre regímenes y estima coeficientes distintos para cada estado. Apropiado cuando el objetivo es interpretabilidad causal, no solo precisión predictiva.
+
+### Impacto esperado
+
+| Métrica | Enfoque actual | Enfoque rediseñado |
+|---|---|---|
+| R² fuera de muestra real | Potencialmente sobreestimado | Medido por walk-forward |
+| Estabilidad entre regímenes | Baja (modelo único) | Alta (modelos especializados) |
+| Detección de crisis | Reactiva | Prospectiva via régimen activo |
+| Interpretabilidad | Feature importance global | Feature importance por régimen |
+
+---
 
 ## 👥 Autores
 
