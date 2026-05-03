@@ -302,7 +302,7 @@ El análisis del periodo 2000–2008 permite extraer conclusiones con relevancia
 - **Random Forest supera a Gradient Boosting en estabilidad** dentro del rango de hiperparámetros explorado, aunque Gradient Boosting presenta menor MAE en el subconjunto de observaciones extremas (crisis 2007–2008), donde la señal no lineal es más pronunciada.
 
 ---
-## 🔬 Rediseño del Enfoque de Modelado ante Cambios de Régimen
+## RESPUESTA A COMENTARIO: Rediseño del Enfoque de Modelado ante Cambios de Régimen
 
 El dataset cubre tres regímenes económicos estructuralmente distintos (burbuja dot-com 2000–2002, expansión 2003–2006, acumulación de riesgo subprime 2007–2008). El enfoque actual entrena Random Forest y Gradient Boosting sobre el período completo usando un corte temporal simple (`train_test_split` con `shuffle=False`), lo que expone los modelos a aprender relaciones que solo son válidas dentro de un régimen y generalizarlas incorrectamente a otros.
 
